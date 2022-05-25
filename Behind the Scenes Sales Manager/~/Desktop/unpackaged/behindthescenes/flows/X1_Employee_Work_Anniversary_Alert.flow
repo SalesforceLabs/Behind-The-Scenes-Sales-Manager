@@ -1,45 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Flow xmlns="http://soap.sforce.com/2006/04/metadata">
     <actionCalls>
-        <name>Post_to_Chatter</name>
+        <name>Post_to_Chatter_0</name>
         <label>Post to Chatter</label>
         <locationX>264</locationX>
-        <locationY>636</locationY>
+        <locationY>876</locationY>
         <actionName>chatterPost</actionName>
         <actionType>chatterPost</actionType>
         <connector>
-            <targetReference>Send_Bday_Message</targetReference>
+            <targetReference>Work_Anniversary_Loop</targetReference>
         </connector>
         <flowTransactionModel>CurrentTransaction</flowTransactionModel>
         <inputParameters>
             <name>text</name>
             <value>
-                <stringValue>{!Send_Bday_Message.Name}&apos;s birthday is today. Go ahead and wish them happy birthday:-) {!Send_Bday_Message.Alias}__NotFound}</stringValue>
+                <stringValue>{!Work_Anniversary_Loop.Name}&apos;s completed {!Noofworkyears} year(s) in Salesforce. Send them a congrats! </stringValue>
             </value>
         </inputParameters>
         <inputParameters>
             <name>subjectNameOrId</name>
             <value>
-                <elementReference>Send_Bday_Message.ManagerId</elementReference>
+                <elementReference>Work_Anniversary_Loop.ManagerId</elementReference>
             </value>
         </inputParameters>
         <storeOutputAutomatically>true</storeOutputAutomatically>
     </actionCalls>
     <actionCalls>
-        <name>Send_Slack_Message</name>
+        <name>Send_Slack_Message_0</name>
         <label>Send Slack Message</label>
         <locationX>264</locationX>
-        <locationY>516</locationY>
+        <locationY>756</locationY>
         <actionName>slackPostMessage</actionName>
         <actionType>slackPostMessage</actionType>
         <connector>
-            <targetReference>Post_to_Chatter</targetReference>
+            <targetReference>Post_to_Chatter_0</targetReference>
         </connector>
         <flowTransactionModel>CurrentTransaction</flowTransactionModel>
         <inputParameters>
             <name>recordId</name>
             <value>
-                <elementReference>Send_Bday_Message.Alias</elementReference>
+                <elementReference>Work_Anniversary_Loop.Alias</elementReference>
             </value>
         </inputParameters>
         <inputParameters>
@@ -57,7 +57,7 @@
         <inputParameters>
             <name>slackMessage</name>
             <value>
-                <stringValue>{!Send_Bday_Message.Name}&apos;s birthday is today. Wish them a happy birthday!</stringValue>
+                <stringValue>{!Work_Anniversary_Loop.Name}&apos;s completed {!Noofworkyears} year(s) in Salesforce. Send them a congrats! </stringValue>
             </value>
         </inputParameters>
         <inputParameters>
@@ -69,17 +69,81 @@
         <storeOutputAutomatically>true</storeOutputAutomatically>
     </actionCalls>
     <apiVersion>54.0</apiVersion>
-    <interviewLabel>Birthday Events - Daily Trigger {!$Flow.CurrentDateTime}</interviewLabel>
-    <label>Birthday Events - Daily Trigger</label>
+    <assignments>
+        <name>WorkYears</name>
+        <label>WorkYears</label>
+        <locationX>264</locationX>
+        <locationY>636</locationY>
+        <assignmentItems>
+            <assignToReference>NoofYears</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <elementReference>Noofworkyears</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Send_Slack_Message_0</targetReference>
+        </connector>
+    </assignments>
+    <decisions>
+        <name>IsAnnivToday</name>
+        <label>IsAnnivToday</label>
+        <locationX>396</locationX>
+        <locationY>516</locationY>
+        <defaultConnector>
+            <targetReference>Work_Anniversary_Loop</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Default Outcome</defaultConnectorLabel>
+        <rules>
+            <name>AnnivToday_Yes</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>WorkAnniversaryMMDD</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <elementReference>TodayMMDD</elementReference>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>Work_Anniversary_Loop.ManagerId</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>WorkYears</targetReference>
+            </connector>
+            <label>AnnivToday=Yes</label>
+        </rules>
+    </decisions>
+    <formulas>
+        <name>Noofworkyears</name>
+        <dataType>Number</dataType>
+        <expression>YEAR({!$Flow.CurrentDate}) - YEAR({!Work_Anniversary_Loop.Employee_Start_Date__c})</expression>
+        <scale>0</scale>
+    </formulas>
+    <formulas>
+        <name>TodayMMDD</name>
+        <dataType>String</dataType>
+        <expression>TEXT(MONTH({!$Flow.CurrentDate}))+TEXT(DAY({!$Flow.CurrentDate}))</expression>
+    </formulas>
+    <formulas>
+        <name>WorkAnniversaryMMDD</name>
+        <dataType>String</dataType>
+        <expression>TEXT(MONTH({!Work_Anniversary_Loop.Employee_Start_Date__c}))+TEXT(DAY({!Work_Anniversary_Loop.Employee_Start_Date__c}))</expression>
+    </formulas>
+    <interviewLabel>1. Employee Work Anniversary Alert {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>1. Employee Work Anniversary Alert</label>
     <loops>
-        <name>Send_Bday_Message</name>
-        <label>Send Bday Message</label>
+        <name>Work_Anniversary_Loop</name>
+        <label>Work Anniversary Loop</label>
         <locationX>176</locationX>
         <locationY>396</locationY>
-        <collectionReference>Birthday_Roster</collectionReference>
+        <collectionReference>Work_Anniversary_Roster</collectionReference>
         <iterationOrder>Asc</iterationOrder>
         <nextValueConnector>
-            <targetReference>Send_Slack_Message</targetReference>
+            <targetReference>IsAnnivToday</targetReference>
         </nextValueConnector>
     </loops>
     <processMetadataValues>
@@ -102,22 +166,15 @@
     </processMetadataValues>
     <processType>AutoLaunchedFlow</processType>
     <recordLookups>
-        <name>Birthday_Roster</name>
-        <label>Birthday Roster</label>
+        <name>Work_Anniversary_Roster</name>
+        <label>Work Anniversary Roster</label>
         <locationX>176</locationX>
         <locationY>276</locationY>
         <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
         <connector>
-            <targetReference>Send_Bday_Message</targetReference>
+            <targetReference>Work_Anniversary_Loop</targetReference>
         </connector>
         <filterLogic>and</filterLogic>
-        <filters>
-            <field>Employee_Birthday__c</field>
-            <operator>EqualTo</operator>
-            <value>
-                <elementReference>$Flow.CurrentDate</elementReference>
-            </value>
-        </filters>
         <filters>
             <field>IsActive</field>
             <operator>EqualTo</operator>
@@ -135,7 +192,7 @@
         <locationX>50</locationX>
         <locationY>0</locationY>
         <connector>
-            <targetReference>Birthday_Roster</targetReference>
+            <targetReference>Work_Anniversary_Roster</targetReference>
         </connector>
         <schedule>
             <frequency>Daily</frequency>
@@ -144,7 +201,7 @@
         </schedule>
         <triggerType>Scheduled</triggerType>
     </start>
-    <status>Draft</status>
+    <status>Active</status>
     <variables>
         <name>MessageReceiver</name>
         <dataType>String</dataType>
@@ -154,5 +211,13 @@
         <value>
             <elementReference>$User.Alias</elementReference>
         </value>
+    </variables>
+    <variables>
+        <name>NoofYears</name>
+        <dataType>Number</dataType>
+        <isCollection>false</isCollection>
+        <isInput>true</isInput>
+        <isOutput>true</isOutput>
+        <scale>0</scale>
     </variables>
 </Flow>

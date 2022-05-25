@@ -1,45 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Flow xmlns="http://soap.sforce.com/2006/04/metadata">
     <actionCalls>
-        <name>Post_to_Chatter</name>
+        <name>Post_to_Chatter_0</name>
         <label>Post to Chatter</label>
         <locationX>264</locationX>
-        <locationY>636</locationY>
+        <locationY>756</locationY>
         <actionName>chatterPost</actionName>
         <actionType>chatterPost</actionType>
         <connector>
-            <targetReference>Send_Congrats_Message</targetReference>
+            <targetReference>Send_Bday_Message</targetReference>
         </connector>
         <flowTransactionModel>CurrentTransaction</flowTransactionModel>
         <inputParameters>
             <name>text</name>
             <value>
-                <stringValue>{!Send_Congrats_Message.Name}&apos;s Birthday is today. Go ahead and wish :-) {!Send_Congrats_Message.Alias}__NotFound}</stringValue>
+                <stringValue>{!Send_Bday_Message.Name}&apos;s birthday is today. Wish them a happy birthday! {!Send_Bday_Message.Alias}__NotFound}</stringValue>
             </value>
         </inputParameters>
         <inputParameters>
             <name>subjectNameOrId</name>
             <value>
-                <elementReference>Send_Congrats_Message.Id</elementReference>
+                <elementReference>Send_Bday_Message.ManagerId</elementReference>
             </value>
         </inputParameters>
         <storeOutputAutomatically>true</storeOutputAutomatically>
     </actionCalls>
     <actionCalls>
-        <name>Send_Message</name>
-        <label>Send Message</label>
+        <name>Send_Slack_Message_0</name>
+        <label>Send Slack Message</label>
         <locationX>264</locationX>
-        <locationY>516</locationY>
+        <locationY>636</locationY>
         <actionName>slackPostMessage</actionName>
         <actionType>slackPostMessage</actionType>
         <connector>
-            <targetReference>Post_to_Chatter</targetReference>
+            <targetReference>Post_to_Chatter_0</targetReference>
         </connector>
         <flowTransactionModel>CurrentTransaction</flowTransactionModel>
         <inputParameters>
             <name>recordId</name>
             <value>
-                <elementReference>Send_Congrats_Message.Alias</elementReference>
+                <elementReference>Send_Bday_Message.Alias</elementReference>
             </value>
         </inputParameters>
         <inputParameters>
@@ -57,7 +57,7 @@
         <inputParameters>
             <name>slackMessage</name>
             <value>
-                <stringValue>{!Send_Congrats_Message.Name}&apos;s Birthday is today. Go ahead and wish :-) {!Send_Congrats_Message.Alias}</stringValue>
+                <stringValue>{!Send_Bday_Message.Name}&apos;s birthday is today. Wish them a happy birthday!</stringValue>
             </value>
         </inputParameters>
         <inputParameters>
@@ -69,17 +69,59 @@
         <storeOutputAutomatically>true</storeOutputAutomatically>
     </actionCalls>
     <apiVersion>54.0</apiVersion>
-    <interviewLabel>Work Anniversary Events - Daily Trigger {!$Flow.CurrentDateTime}</interviewLabel>
-    <label>Work Anniversary Events - Daily Trigger</label>
+    <decisions>
+        <name>IsBirthdayToday</name>
+        <label>IsBirthdayToday</label>
+        <locationX>396</locationX>
+        <locationY>516</locationY>
+        <defaultConnector>
+            <targetReference>Send_Bday_Message</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Default Outcome</defaultConnectorLabel>
+        <rules>
+            <name>BirthdayToday_Yes</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>BdayMMDD</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <elementReference>TodayMMDD</elementReference>
+                </rightValue>
+            </conditions>
+            <conditions>
+                <leftValueReference>Send_Bday_Message.ManagerId</leftValueReference>
+                <operator>IsNull</operator>
+                <rightValue>
+                    <booleanValue>false</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Send_Slack_Message_0</targetReference>
+            </connector>
+            <label>BirthdayToday=Yes</label>
+        </rules>
+    </decisions>
+    <formulas>
+        <name>BdayMMDD</name>
+        <dataType>String</dataType>
+        <expression>TEXT(MONTH({!Send_Bday_Message.Employee_Birthday__c}))+TEXT(DAY({!Send_Bday_Message.Employee_Birthday__c}))</expression>
+    </formulas>
+    <formulas>
+        <name>TodayMMDD</name>
+        <dataType>String</dataType>
+        <expression>TEXT(MONTH({!$Flow.CurrentDate}))+TEXT(DAY({!$Flow.CurrentDate}))</expression>
+    </formulas>
+    <interviewLabel>2. Employee Birthday Alert {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>2. Employee Birthday Alert</label>
     <loops>
-        <name>Send_Congrats_Message</name>
-        <label>Send Congrats Message</label>
+        <name>Send_Bday_Message</name>
+        <label>Send Bday Message</label>
         <locationX>176</locationX>
         <locationY>396</locationY>
-        <collectionReference>Work_Anniversary_Roster</collectionReference>
+        <collectionReference>Birthday_Roster</collectionReference>
         <iterationOrder>Asc</iterationOrder>
         <nextValueConnector>
-            <targetReference>Send_Message</targetReference>
+            <targetReference>IsBirthdayToday</targetReference>
         </nextValueConnector>
     </loops>
     <processMetadataValues>
@@ -102,22 +144,15 @@
     </processMetadataValues>
     <processType>AutoLaunchedFlow</processType>
     <recordLookups>
-        <name>Work_Anniversary_Roster</name>
-        <label>Work Anniversary Roster</label>
+        <name>Birthday_Roster</name>
+        <label>Birthday Roster</label>
         <locationX>176</locationX>
         <locationY>276</locationY>
         <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
         <connector>
-            <targetReference>Send_Congrats_Message</targetReference>
+            <targetReference>Send_Bday_Message</targetReference>
         </connector>
         <filterLogic>and</filterLogic>
-        <filters>
-            <field>Employee_Start_Date__c</field>
-            <operator>EqualTo</operator>
-            <value>
-                <elementReference>$Flow.CurrentDate</elementReference>
-            </value>
-        </filters>
         <filters>
             <field>IsActive</field>
             <operator>EqualTo</operator>
@@ -135,7 +170,7 @@
         <locationX>50</locationX>
         <locationY>0</locationY>
         <connector>
-            <targetReference>Work_Anniversary_Roster</targetReference>
+            <targetReference>Birthday_Roster</targetReference>
         </connector>
         <schedule>
             <frequency>Daily</frequency>
@@ -145,4 +180,14 @@
         <triggerType>Scheduled</triggerType>
     </start>
     <status>Active</status>
+    <variables>
+        <name>MessageReceiver</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+        <value>
+            <elementReference>$User.Alias</elementReference>
+        </value>
+    </variables>
 </Flow>
